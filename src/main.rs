@@ -1,8 +1,10 @@
+use std::time::Instant;
 
-
-use axum::{body::Body, http::{Response, StatusCode}, response::IntoResponse, routing::{delete, get, post}, Json, Router};
+use axum::{body::Body, http::{Response, StatusCode}, response::IntoResponse, routing::{delete, get, post}, Extension, Json, Router};
 use serde::Serialize;
+use serde_json::json;
 use tokio::net::TcpListener;
+use sqlx::{MySqlPool, Row};
 
 
 
@@ -42,19 +44,58 @@ async fn list_users() -> Json<Vec<User>> {
     Json(users)
 }
 
+// Define the get_users function as before
+async fn get_users(Extension(pool): Extension<MySqlPool>) -> impl IntoResponse {
+    let start = Instant::now();
+    let rows = match sqlx::query("SELECT id, name, email FROM users")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(rows) => rows,
+        Err(_) => {
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            )
+                .into_response()
+        }
+    };
+
+    let users: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
+            json!({
+                "id": row.try_get::<i32, _>("id").unwrap_or_default(),
+                "name": row.try_get::<String, _>("name").unwrap_or_default(),
+                "email": row.try_get::<String, _>("email").unwrap_or_default(),
+            })
+        })
+        .collect();
+    let duration = start.elapsed();
+    println!("Time elapsed in expensive_function() is: {:?}", duration);
+    (axum::http::StatusCode::OK, Json(users)).into_response()
+}
+
+
 #[tokio::main]
 async fn main() {
+    let database_url = "mysql://root:Rust_12345@0.tcp.ngrok.io:11872/mysql";
+    let pool = MySqlPool::connect(&database_url).await.unwrap();
+
+  
+ 
     let app = Router::new()
-        .route("/", get(|| async {"Hello, Rust!"}))
-        .route("/create-user", post(create_user))
-        .route("/list-users", get(list_users))
-        .route("/delete-users", delete(list_users).trace(|| async {println!("Deleted users")}))
+        .route("/users", get(get_users))
+        .layer(Extension(pool))
+        // .route("/create-user", post(create_user))
+        // .route("/list-users", get(list_users))
+        // .route("/delete-users", delete(list_users).trace(|| async {println!("Deleted users")}))
         
         ;
 
         let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
         // listens in for requests comming in at post 3000 for the local machine
-
+   
         println!("Running on http://localhost:3000");
         axum::serve(listener, app.into_make_service()).await.unwrap();
         /*
