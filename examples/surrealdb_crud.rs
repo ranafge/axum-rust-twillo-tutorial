@@ -57,11 +57,21 @@ async fn main() -> surrealdb::Result<()>{
         }).await?;
         println!("Created person with id: {:?}", created);
 
-    // 
+    // update a person with a specific id 
 
+    let updated: Option<Record> = db.update(("person", "jaime"))
+        .merge(Responsibility {marketing:true}).await?;
+
+    dbg!(updated);
+
+    // Select all perople records
+    let people = db.
+        query("SELECT marketing, count() FROM type::table($table) GROUP BY marketing")
+        .bind(("table", "person"))
+        .await?;
+    dbg!(people);
 
     
-
 
     Ok(())
 }

@@ -8,7 +8,9 @@ async fn main() {
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
     println!("Running on http://localhost:3000");
 
-    axum::serve(listener, app.into_make_service()).await.unwrap();
+    axum::serve(listener, app.into_make_service())
+        .await
+        .unwrap();
 }
 
 /*
