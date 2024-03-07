@@ -1,1 +1,3 @@
-// mod surrealdb_crud;
+pub mod surrealdb_curd_person;
+
+
