@@ -146,7 +146,7 @@ struct Person {
 }
 
 // axum::Json<serde_json::Value>
-pub async fn people_list() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn people_list() -> Json<Vec<User>> {
     println!("people list handkeler sdjfssd");
     // connect to the server 
     let db = Surreal::new::<Ws>("127.0.0.1:8000").await.unwrap();
@@ -187,6 +187,7 @@ pub async fn people_list() -> Result<(), Box<dyn std::error::Error>> {
     // people.check().into_iter().map(|x| x.name).collect::<Value<String>>;
     dbg!(people);
     // Ok(people)
-    Ok(())
+    Json(people)
+    // Ok(())
 
 }
